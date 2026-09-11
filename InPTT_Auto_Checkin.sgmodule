@@ -1,5 +1,5 @@
 #!name=InPTT 自動簽到
-#!desc=自動擷取 InPTT Token，並每日自動簽到
+#!desc=自動擷取 InPTT Token，並每日 00:20 自動簽到
 #!author=howsingsong
 
 [Script]
