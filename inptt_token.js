@@ -1,32 +1,59 @@
-// InPTT Token Capture
-// 自動擷取 Authorization Bearer Token
+// ==========================================
+// InPTT Token Capture for Surge
+// Author: howsingsong
+// ==========================================
 
-const headers = $request.headers || {};
+const STORE_KEY = "inptt_authorization";
 
-const auth =
-  headers["authorization"] ||
-  headers["Authorization"];
+try {
+  const headers = $request.headers || {};
 
-if (auth && /^Bearer\s+/i.test(auth)) {
+  const authorization =
+    headers["authorization"] ||
+    headers["Authorization"];
 
-  const oldAuth = $persistentStore.read("inptt_authorization");
-
-  if (auth !== oldAuth) {
-
-    const success = $persistentStore.write(
-      auth,
-      "inptt_authorization"
-    );
-
-    if (success) {
-      console.log("✅ InPTT Token 已更新並儲存");
-    } else {
-      console.log("❌ InPTT Token 儲存失敗");
-    }
-
+  if (!authorization) {
+    console.log("ℹ️ InPTT：此請求沒有 Authorization Header");
+    $done({});
+  } else if (!/^Bearer\s+/i.test(authorization)) {
+    console.log("ℹ️ InPTT：Authorization 不是 Bearer Token");
+    $done({});
   } else {
-    console.log("ℹ️ InPTT Token 無變化");
-  }
-}
 
-$done({});
+    const oldAuthorization =
+      $persistentStore.read(STORE_KEY);
+
+    // Token 沒有變化
+    if (oldAuthorization === authorization) {
+
+      console.log("ℹ️ InPTT Token 無變化");
+
+      $done({});
+
+    } else {
+
+      const success =
+        $persistentStore.write(
+          authorization,
+          STORE_KEY
+        );
+
+      if (success) {
+        console.log("✅ InPTT Token 已擷取並儲存");
+      } else {
+        console.log("❌ InPTT Token 儲存失敗");
+      }
+
+      $done({});
+    }
+  }
+
+} catch (error) {
+
+  console.log(
+    "❌ InPTT Token 擷取錯誤：" +
+    String(error)
+  );
+
+  $done({});
+}
