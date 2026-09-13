@@ -1,73 +1,159 @@
-// InPTT Auto Check-in
-// 支援 Surge Module 參數
+// ==========================================
+// InPTT Auto Check-in for Surge
+// Author: howsingsong
+// ==========================================
 
-function parseArguments(str) {
+const STORE_KEY = "inptt_authorization";
+
+
+// ==========================================
+// 解析 Surge Module Arguments
+// ==========================================
+
+function parseArguments(argumentString) {
+
   const result = {};
 
-  if (!str) return result;
+  if (!argumentString) {
+    return result;
+  }
 
-  str.split("&").forEach(item => {
-    const index = item.indexOf("=");
+  argumentString
+    .split("&")
+    .forEach(item => {
 
-    if (index !== -1) {
-      const key = item.substring(0, index);
-      const value = item.substring(index + 1);
-      result[key] = value;
-    }
-  });
+      const index =
+        item.indexOf("=");
+
+      if (index === -1) {
+        return;
+      }
+
+      const key =
+        item.substring(
+          0,
+          index
+        );
+
+      const value =
+        item.substring(
+          index + 1
+        );
+
+      result[key] =
+        value;
+    });
 
   return result;
 }
 
-const args = parseArguments(
-  typeof $argument !== "undefined" ? $argument : ""
-);
+
+// ==========================================
+// 讀取 Module Arguments
+// ==========================================
+
+const args =
+  parseArguments(
+    typeof $argument !== "undefined"
+      ? $argument
+      : ""
+  );
+
+
+// ==========================================
+// 通知設定
+// ==========================================
 
 const notifyEnabled =
-  String(args.notify || "true").toLowerCase() !== "false";
+  String(
+    args.notify || "true"
+  ).toLowerCase() !== "false";
 
-let manualToken = (args.manual_token || "").trim();
+
+// ==========================================
+// Token 設定
+// ==========================================
+
+let manualToken =
+  String(
+    args.manual_token || "auto"
+  ).trim();
+
+let authorization;
 
 
-// ==============================
-// Token 取得
-// ==============================
+// ==========================================
+// 自動 Token 模式
+// ==========================================
 
-let auth;
+if (
+  manualToken === "" ||
+  manualToken.toLowerCase() === "auto"
+) {
 
-if (manualToken) {
+  authorization =
+    $persistentStore.read(
+      STORE_KEY
+    );
 
-  // 可直接貼 JWT，也可以貼 Bearer xxxxx
-  if (/^Bearer\s+/i.test(manualToken)) {
-    auth = manualToken;
+  if (authorization) {
+
+    console.log(
+      "ℹ️ InPTT：使用自動擷取的 Token"
+    );
+
   } else {
-    auth = "Bearer " + manualToken;
+
+    console.log(
+      "❌ InPTT：尚未擷取 Token"
+    );
   }
 
-  console.log("ℹ️ 使用模組中手動設定的 Token");
+
+// ==========================================
+// 手動 Token 模式
+// ==========================================
 
 } else {
 
-  auth = $persistentStore.read("inptt_authorization");
+  if (
+    /^Bearer\s+/i.test(
+      manualToken
+    )
+  ) {
 
-  if (auth) {
-    console.log("ℹ️ 使用 Surge 自動擷取的 Token");
+    authorization =
+      manualToken;
+
+  } else {
+
+    authorization =
+      "Bearer " +
+      manualToken;
   }
+
+  console.log(
+    "ℹ️ InPTT：使用模組手動設定的 Token"
+  );
 }
 
 
-// ==============================
+// ==========================================
 // 沒有 Token
-// ==============================
+// ==========================================
 
-if (!auth) {
+if (!authorization) {
 
   const message =
-    "請先開啟一次 InPTT App，讓 Surge 自動取得 Token，或在模組參數 manual_token 中手動填入。";
+    "請先開啟 InPTT App，讓 Surge 自動擷取登入 Token。";
 
-  console.log("❌ " + message);
+  console.log(
+    "❌ " +
+    message
+  );
 
   if (notifyEnabled) {
+
     $notification.post(
       "InPTT 自動簽到",
       "❌ 找不到登入 Token",
@@ -79,53 +165,88 @@ if (!auth) {
 
 } else {
 
-  checkin();
+  performCheckin();
 }
 
 
-// ==============================
-// 執行簽到
-// ==============================
+// ==========================================
+// 執行 InPTT 簽到
+// ==========================================
 
-function checkin() {
+function performCheckin() {
 
   const request = {
-    url: "https://api.inptt.cc/checkin/action",
+
+    url:
+      "https://api.inptt.cc/checkin/action",
 
     headers: {
-      "Authorization": auth,
-      "inptt": "ios",
-      "Accept": "*/*",
-      "Accept-Language": "zh-TW,zh-Hant;q=0.9",
+
+      "Authorization":
+        authorization,
+
+      "inptt":
+        "ios",
+
+      "Accept":
+        "*/*",
+
+      "Accept-Language":
+        "zh-TW,zh-Hant;q=0.9",
+
       "User-Agent":
         "Mozilla/5.0 (iPhone; CPU iPhone OS 26_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) InPTT/1.4.6",
-      "Referer": "https://api.inptt.cc"
+
+      "Referer":
+        "https://api.inptt.cc"
     }
   };
 
 
+  // ========================================
+  // POST /checkin/action
+  // ========================================
+
   $httpClient.post(
     request,
-    function(error, response, data) {
+    function(
+      error,
+      response,
+      data
+    ) {
+
+      // ====================================
+      // 網路錯誤
+      // ====================================
 
       if (error) {
 
+        const message =
+          String(error);
+
         console.log(
-          "❌ InPTT 簽到連線失敗：" + error
+          "❌ InPTT 簽到連線失敗：" +
+          message
         );
 
         if (notifyEnabled) {
+
           $notification.post(
             "InPTT 自動簽到",
             "❌ 連線失敗",
-            String(error)
+            message
           );
         }
 
         $done();
+
         return;
       }
 
+
+      // ====================================
+      // HTTP Status Code
+      // ====================================
 
       const statusCode =
         Number(
@@ -137,9 +258,15 @@ function checkin() {
         ) || 0;
 
 
-      // ==============================
+      console.log(
+        "ℹ️ InPTT HTTP Status：" +
+        statusCode
+      );
+
+
+      // ====================================
       // Token 失效
-      // ==============================
+      // ====================================
 
       if (
         statusCode === 401 ||
@@ -147,82 +274,119 @@ function checkin() {
       ) {
 
         console.log(
-          "⚠️ InPTT Token 可能已失效"
+          "⚠️ InPTT Token 已失效或沒有權限"
         );
 
         if (notifyEnabled) {
+
           $notification.post(
             "InPTT 自動簽到",
             "⚠️ Token 已失效",
-            "請重新開啟 InPTT App，Surge 會自動取得新的 Token。"
+            "請重新開啟 InPTT App，Surge 會自動擷取新的 Token。"
           );
         }
 
         $done();
+
         return;
       }
 
 
-      // ==============================
-      // JSON 解析
-      // ==============================
+      // ====================================
+      // 解析 JSON
+      // ====================================
 
       let result;
 
       try {
 
-        result = JSON.parse(data);
+        result =
+          JSON.parse(
+            data || "{}"
+          );
 
-      } catch (e) {
+      } catch (error) {
 
         console.log(
-          "⚠️ 無法解析 InPTT 回傳內容：" +
-          data
+          "⚠️ InPTT 回傳內容不是有效 JSON"
+        );
+
+        console.log(
+          data || ""
         );
 
         if (notifyEnabled) {
+
           $notification.post(
             "InPTT 自動簽到",
-            "⚠️ 回傳內容異常",
-            data || "沒有回傳內容"
+            "⚠️ 回傳資料異常",
+            data ||
+            "伺服器沒有回傳內容"
           );
         }
 
         $done();
+
         return;
       }
 
 
-      // ==============================
-      // 成功
-      // ==============================
+      // ====================================
+      // 簽到成功
+      // ====================================
 
-      if (result.status === "success") {
+      if (
+        result.status ===
+        "success"
+      ) {
 
-        const d = result.data || {};
+        const d =
+          result.data || {};
+
 
         const awarded =
-          d.awarded ?? "?";
+          d.awarded !== undefined
+            ? d.awarded
+            : "?";
 
-        const total =
-          d.total_points ?? "?";
+
+        const totalPoints =
+          d.total_points !== undefined
+            ? d.total_points
+            : "?";
+
 
         const streak =
-          d.streak ?? "?";
+          d.streak !== undefined
+            ? d.streak
+            : "?";
 
-        const day =
-          d.day_in_cycle ?? "?";
+
+        const dayInCycle =
+          d.day_in_cycle !== undefined
+            ? d.day_in_cycle
+            : "?";
 
 
         const message =
-          `獲得 ${awarded} 點｜` +
-          `總點數 ${total}｜` +
-          `連續 ${streak} 天｜` +
-          `週期第 ${day} 天`;
+          "獲得 " +
+          awarded +
+          " 點" +
+          "｜總點數 " +
+          totalPoints +
+          "｜連續 " +
+          streak +
+          " 天" +
+          "｜週期第 " +
+          dayInCycle +
+          " 天";
 
 
         console.log(
-          "✅ InPTT 簽到成功：" +
+          "✅ InPTT 簽到成功"
+        );
+
+        console.log(
           message
         );
 
@@ -231,27 +395,47 @@ function checkin() {
 
           $notification.post(
             "InPTT 自動簽到",
-            "✅ 簽到成功",
+            awarded > 0
+              ? "✅ 簽到成功"
+              : "✅ 今日已完成",
             message
           );
         }
 
-      } else {
+        $done();
 
-        console.log(
-          "⚠️ InPTT 簽到未成功：" +
-          data
-        );
-
-        if (notifyEnabled) {
-
-          $notification.post(
-            "InPTT 自動簽到",
-            "⚠️ 簽到未成功",
-            data
-          );
-        }
+        return;
       }
+
+
+      // ====================================
+      // API 回傳其他狀態
+      // ====================================
+
+      const errorMessage =
+        result.message ||
+        result.error ||
+        data ||
+        "未知錯誤";
+
+
+      console.log(
+        "⚠️ InPTT 簽到未成功：" +
+        errorMessage
+      );
+
+
+      if (notifyEnabled) {
+
+        $notification.post(
+          "InPTT 自動簽到",
+          "⚠️ 簽到未成功",
+          String(
+            errorMessage
+          )
+        );
+      }
+
 
       $done();
     }
