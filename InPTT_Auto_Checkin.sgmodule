@@ -1,11 +1,16 @@
 #!name=InPTT 自動簽到
-#!desc=自動擷取 InPTT Token，並每日 00:20 自動簽到
+#!desc=自動擷取 InPTT Token，每日自動簽到，可在模組內自訂參數
 #!author=howsingsong
+
+#!arguments=checkin_hour:0,checkin_minute:20,notify:true,manual_token
+#!arguments-desc=簽到時間使用24小時制。manual_token 可留空，留空時會自動擷取 InPTT 登入 Token。
 
 [Script]
 InPTT Token 擷取 = type=http-request,pattern=^https:\/\/api\.inptt\.cc\/,script-path=https://raw.githubusercontent.com/howsingsong/inptt-surge/main/inptt_token.js
 
-InPTT 每日自動簽到 = type=cron,cronexp="20 0 * * *",script-path=https://raw.githubusercontent.com/howsingsong/inptt-surge/main/inptt_checkin.js,wake-system=true,timeout=20
+InPTT 每日自動簽到 = type=cron,cronexp="{{{checkin_minute}}} {{{checkin_hour}}} * * *",script-path=https://raw.githubusercontent.com/howsingsong/inptt-surge/main/inptt_checkin.js,argument="notify={{{notify}}}&manual_token={{{manual_token}}}",wake-system=true,timeout=20
+
+InPTT 手動測試簽到 = type=generic,script-path=https://raw.githubusercontent.com/howsingsong/inptt-surge/main/inptt_checkin.js,argument="notify=true&manual_token={{{manual_token}}}",timeout=20
 
 [MITM]
 hostname = %APPEND% api.inptt.cc
