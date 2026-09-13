@@ -1,9 +1,9 @@
 #!name=InPTT 自動簽到
-#!desc=自動擷取 InPTT Token，每日自動簽到，可在模組內自訂參數
+#!desc=自動擷取 InPTT Token，每日自動簽到，可在模組內編輯參數
 #!author=howsingsong
 
-#!arguments=checkin_hour:0,checkin_minute:20,notify:true,manual_token
-#!arguments-desc=簽到時間使用24小時制。manual_token 可留空，留空時會自動擷取 InPTT 登入 Token。
+#!arguments=checkin_hour:0,checkin_minute:20,notify:true,manual_token:auto
+#!arguments-desc=簽到時間使用24小時制。manual_token 預設 auto，會自動使用 InPTT 擷取的 Token；需要手動指定時再貼入 Token。
 
 [Script]
 InPTT Token 擷取 = type=http-request,pattern=^https:\/\/api\.inptt\.cc\/,script-path=https://raw.githubusercontent.com/howsingsong/inptt-surge/main/inptt_token.js
